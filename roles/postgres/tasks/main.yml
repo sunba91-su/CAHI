@@ -1,12 +1,13 @@
 ---
-- name: Add PostgresSQL reposoitory GPG key
-  apt_key:
+- name: Download PostgresSQL repository GPG key
+  get_url:
     url: "{{ postgres_repo_key }}"
-    state: present
+    dest: /usr/share/keyrings/postgresql-archive-keyring.asc
+    mode: '0644'
 
 - name: Add PostgresSQL repository
   apt_repository:
-    repo: "deb http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
+    repo: "deb [signed-by=/usr/share/keyrings/postgresql-archive-keyring.asc] http://apt.postgresql.org/pub/repos/apt {{ ansible_distribution_release }}-pgdg main"
     state: present
     filename: pgdg
     update_cache: true

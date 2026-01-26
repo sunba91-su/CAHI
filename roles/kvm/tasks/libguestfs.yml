@@ -7,10 +7,11 @@
 # Temporarly do not validate certs or use http
 # since *erlang-solutions.com certificate expired
 # on 2021-08-21.
-- name: Add Erlang repository GPG key
-  apt_key:
+- name: Download Erlang repository GPG key
+  get_url:
     url: "{{ erlang_repo_key }}"
-    state: present
+    dest: /usr/share/keyrings/erlang-archive-keyring.asc
+    mode: '0644'
     validate_certs: false
 
 # Temporarly do not validate certs or use http
@@ -18,7 +19,7 @@
 # on 2021-08-21.
 - name: Add Erlang repository
   apt_repository:
-    repo: "deb http://packages.erlang-solutions.com/debian {{ ansible_distribution_release }} contrib"
+    repo: "deb [signed-by=/usr/share/keyrings/erlang-archive-keyring.asc] http://packages.erlang-solutions.com/debian {{ ansible_distribution_release }} contrib"
     state: present
     filename: erlang
     update_cache: false

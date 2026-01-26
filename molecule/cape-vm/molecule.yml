@@ -11,9 +11,9 @@ lint: |
   yamllint .
   ansible-lint main.yml
 platforms:
-  - name: cape-ubuntu-vm
-    hostname: cape-ubuntu-vm
-    box: ubuntu/focal64
+  - name: cape-noble-vm
+    hostname: cape-noble-vm
+    box: ubuntu/noble64
     cpu: 4
     memory: 4096
     provider_raw_config_args:
@@ -29,7 +29,7 @@ provisioner:
       pipelining: true
   inventory:
     #host_vars:
-    #  cape-vm-ubuntu2004:
+    #  cape-noble-vm:
     #    ansible_user: ansible
     links:
       group_vars: ../../group_vars

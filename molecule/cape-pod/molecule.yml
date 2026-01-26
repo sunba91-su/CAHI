@@ -11,10 +11,10 @@ lint: |
   yamllint .
   ansible-lint main.yml
 platforms:
-  - name: cape-pod-ubuntu2004
-    hostname: cape-pod-ubuntu2004
-    image: "cape-pod-ubuntu2004:latest"
-    dockerfile: ../../dockerfiles/ubuntu2004/Dockerfile
+  - name: cape-pod-ubuntu2404
+    hostname: cape-pod-ubuntu2404
+    image: "cape-pod-ubuntu2404:latest"
+    dockerfile: ../../dockerfiles/ubuntu2404/Dockerfile
     pull: false
     privileged: true
     exposed_ports:
@@ -35,7 +35,7 @@ provisioner:
       pipelining: true
   inventory:
     host_vars:
-      cape-ubuntu2004:
+      cape-pod-ubuntu2404:
         ansible_user: ansible
     links:
       group_vars: ../../group_vars

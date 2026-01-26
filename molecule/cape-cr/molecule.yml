@@ -11,7 +11,7 @@ platforms:
   - name: cape-sandbox-ubuntu
     hostname: cape-sandbox-ubuntu
     image: "cape-sandbox-ubuntu:latest"
-    dockerfile: ../../dockerfiles/ubuntu2004/Dockerfile
+    dockerfile: ../../dockerfiles/ubuntu2404/Dockerfile
     pull: false
     privileged: true
     exposed_ports:
@@ -28,7 +28,7 @@ platforms:
   - name: cape-hypervisor-ubuntu
     hostname: cape-hypervisor-ubuntu
     image: "cape-hypervisor-ubuntu:latest"
-    dockerfile: ../../dockerfiles/ubuntu2004/Dockerfile
+    dockerfile: ../../dockerfiles/ubuntu2404/Dockerfile
     pull: false
     privileged: true
     exposed_ports:

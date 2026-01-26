@@ -1,7 +1,7 @@
 flor
 Pebble
 pymisp
-cryptography==44.0.1
+cryptography>=41.0.0
 requests[security,socks]
 pyOpenSSL
 pefile
@@ -12,34 +12,32 @@ olefile
 networkx>=2.1
 mixbox
 capstone
-PyCrypto
+pycryptodome
 voluptuous
 xmltodict
-future
 python-dateutil
 requests_file
-gevent==23.9.1
+gevent>=23.9.1
 simplejson
 pyvmomi
 pyinstaller
 maec
 regex
-xmltodict
-SFlock2==0.3.21
+SFlock2>=0.3.21
 git+https://github.com/doomedraven/socks5man.git
-pyattck==4.0.3
+pyattck>=4.0.3
 distorm3
 openpyxl
-git+https://github.com/volatilityfoundation/volatility3
-git+https://github.com/DissectMalware/XLMMacroDeobfuscator
+volatility3
+XLMMacroDeobfuscator
 passlib
 pyzipper
 # https://github.com/kevoreilly/CAPEv2/commit/b9ec2271881dfe2621d7672541d562d8bf563533
 #git+https://github.com/Defense-Cyber-Crime-Center/DC3-MWCP.git
 mwcp
 git+https://github.com/kevthehermit/RATDecoders.git
-git+https://github.com/fireeye/capa.git
-greenlet==0.4.16
+flare-capa
+greenlet>=2.0.0
 cython
 # According to sources, pyre2 can be installed
 # directly via pip as opposed to pip git+, so
@@ -67,7 +65,7 @@ pygal
 rarfile
 jsbeautifier
 dpkt
-nose
+pytest
 dnspython
 pytz
 python-magic
@@ -77,9 +75,8 @@ java-random
 python-whois
 bs4
 pype32-py3
-git+https://github.com/kbandla/pydeep.git
-pyvmomi
-django-recaptcha==2.0.6 # https://pypi.org/project/django-recaptcha/
+pydeep
+django-recaptcha>=2.0.6 # https://pypi.org/project/django-recaptcha/
 django-allauth # https://django-allauth.readthedocs.io/en/latest/configuration.html
 django-crispy-forms
 git+https://github.com/CAPESandbox/httpreplay
@@ -93,5 +90,5 @@ djangorestframework
 yara-python>=4.0.0
 netstruct
 pymongo>=3.11.3
-psutil==5.8.0
-tabulate[widechars]==0.8.9
+psutil>=5.8.0
+tabulate[widechars]>=0.8.9
