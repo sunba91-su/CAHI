@@ -64,6 +64,89 @@
     state: present
     update_cache: true
 
+- name: Install additional CAPEv2 dependencies
+  apt:
+    pkg:
+      - python3-venv
+      - build-essential
+      - libssl-dev
+      - python3-dev
+      - python3-pip
+      - cmake
+      - nfs-common
+      - crudini
+      - innoextract
+      - msitools
+      - iptables
+      - psmisc
+      - jq
+      - sqlite3
+      - tmux
+      - net-tools
+      - checkinstall
+      - graphviz
+      - python3-pydot
+      - git
+      - numactl
+      - python3
+      - libjpeg-dev
+      - zlib1g-dev
+      - zpaq
+      - upx-ucl
+      - wget
+      - zip
+      - unzip
+      - lzip
+      - rar
+      - unrar
+      - cabextract
+      - geoip-database
+      - libgeoip-dev
+      - mono-utils
+      - ssdeep
+      - libfuzzy-dev
+      - exiftool
+      - uthash-dev
+      - libconfig-dev
+      - libarchive-dev
+      - libtool
+      - autoconf
+      - automake
+      - privoxy
+      - software-properties-common
+      - weasyprint
+      - xvfb
+      - xfonts-100dpi
+      - tcpdump
+      - libcap2-bin
+      - wireshark-common
+      - python3-pil
+      - subversion
+      - uwsgi
+      - uwsgi-plugin-python3
+      - python3-pyelftools
+      - curl
+      - openvpn
+      - wireguard
+      - libgraphviz-dev
+      - plocate
+    state: present
+    update_cache: true
+    cache_valid_time: 3600
+
+- name: Install de4dot dependencies (best-effort; mono-libraries unavailable on 24.04+)
+  apt:
+    pkg:
+      - libgdiplus
+      - mono-devel
+    state: present
+  failed_when: false
+
+- name: Update locate database
+  command:
+    cmd: updatedb
+  changed_when: false
+
 # Ansible Lint: Package installs should not use latest, use (noqa package-latest)
 # https://github.com/ansible-community/ansible-lint/issues/479
 - name: Ensure pip is updated to latest
