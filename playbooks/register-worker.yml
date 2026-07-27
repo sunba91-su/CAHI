@@ -1,0 +1,68 @@
+---
+- name: Register worker node with control node
+  hosts: cape_worker
+  gather_facts: true
+  vars:
+    control_host: "{{ groups['cape_control'][0] }}"
+  tasks:
+    - name: Gather control node facts
+      ansible.builtin.setup:
+      delegate_to: "{{ control_host }}"
+      delegate_facts: true
+
+    - name: Read control node SSH public key
+      ansible.builtin.slurp:
+        src: "/home/{{ hostvars[control_host]['cape_user'] | default('cape') }}/.ssh/id_rsa.pub"
+      register: control_pubkey
+      delegate_to: "{{ control_host }}"
+
+    - name: Authorize worker SSH key on control
+      ansible.builtin.authorized_key:
+        user: "{{ hostvars[control_host]['cape_user'] | default('cape') }}"
+        state: present
+        key: "{{ control_pubkey['content'] | b64decode }}"
+      delegate_to: "{{ control_host }}"
+
+    - name: Resolve control node IP from iface_ip
+      ansible.builtin.set_fact:
+        control_ip: "{{ hostvars[control_host]['iface_ip'] }}"
+      when: hostvars[control_host]['iface_ip'] is defined
+
+    - name: Fallback to default IPv4 address
+      ansible.builtin.set_fact:
+        control_ip: "{{ hostvars[control_host]['ansible_default_ipv4']['address'] }}"
+      when: control_ip is not defined
+
+    - name: Fail if control node IP could not be resolved
+      ansible.builtin.fail:
+        msg: "Unable to resolve control node IP. Set iface_ip in inventory or ensure ansible_default_ipv4 is available."
+      when: control_ip is not defined or control_ip | length == 0
+
+    - name: Set remote PostgreSQL connection in cuckoo.conf
+      ansible.builtin.lineinfile:
+        path: "{{ cape_root }}/conf/cuckoo.conf"
+        regexp: "^connection ="
+        line: "connection = postgresql://{{ db_user }}:{{ vault_db_password }}@{{ control_ip }}:{{ db_port }}/{{ db_name }}"
+        backrefs: true
+      no_log: true
+
+    - name: Set remote result server
+      ansible.builtin.lineinfile:
+        path: "{{ cape_root }}/conf/cuckoo.conf"
+        regexp: "^resultserver_host ="
+        line: "resultserver_host = {{ control_ip }}"
+        backrefs: true
+
+    - name: Test PostgreSQL connectivity from worker
+      ansible.builtin.command:
+        cmd: "psql -U {{ db_user }} -d {{ db_name }} -h {{ control_ip }} -c 'SELECT 1'"
+      register: pg_test
+      changed_when: false
+      failed_when: pg_test.rc != 0
+      environment:
+        PGPASSWORD: "{{ vault_db_password }}"
+      no_log: true
+
+    - name: Worker registration complete
+      ansible.builtin.debug:
+        msg: "Worker {{ inventory_hostname }} registered with control node {{ control_host }}"
