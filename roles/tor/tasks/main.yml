@@ -1,0 +1,80 @@
+---
+- name: Check if Tor key already exists
+  ansible.builtin.stat:
+    path: /usr/share/keyrings/tor-archive-keyring.gpg
+  register: tor_key_stat
+
+- name: Add Tor repository GPG key
+  ansible.builtin.get_url:
+    url: https://deb.torproject.org/torproject.org/archive-key.gpg
+    dest: /usr/share/keyrings/tor-archive-keyring.gpg
+    mode: "0644"
+    timeout: 15
+  retries: 2
+  delay: 3
+  until: tor_key_download is success
+  register: tor_key_download
+  when: not tor_key_stat.stat.exists
+  ignore_errors: true
+
+- name: Determine Tor repo codename (fallback for unsupported releases)
+  ansible.builtin.set_fact:
+    tor_repo_codename: "{{ {'noble': 'jammy', 'resolute': 'jammy'}.get(ansible_distribution_release, ansible_distribution_release) }}"
+
+- name: Add Tor repository
+  ansible.builtin.apt_repository:
+    repo: "deb [arch={{ 'amd64' if ansible_architecture == 'x86_64' else ansible_architecture }} signed-by=/usr/share/keyrings/tor-archive-keyring.gpg] https://deb.torproject.org/torproject.org {{ tor_repo_codename }} main"
+    state: present
+    update_cache: true
+  when: tor_key_stat.stat.exists
+
+- name: Install Tor
+  ansible.builtin.apt:
+    pkg:
+      - tor
+      - deb.torproject.org-keyring
+      - libzstd1
+    state: present
+  when: tor_key_stat.stat.exists
+
+- name: Generate hashed Tor control password
+  ansible.builtin.command:
+    cmd: tor --hash-password "{{ tor_password }}"
+  register: tor_hashed_password
+  changed_when: false
+  when: tor_password | length > 0 and tor_key_stat.stat.exists
+  no_log: true
+
+- name: Write torrc configuration
+  ansible.builtin.copy:
+    dest: /etc/tor/torrc
+    content: |
+      ## CAPEv2 Tor configuration
+
+      # Transparent proxy port
+      VirtualAddrNetworkIPv4 10.192.0.0/10
+      AutomapHostsOnResolve 1
+      TransPort {{ tor_trans_port }}  # Transparent proxy
+      DNSPort {{ tor_dns_port }}      # DNS proxy
+      ControlPort {{ tor_control_port }}
+
+      # Hashed control password
+      {% if tor_password | length > 0 %}
+      HashedControlPassword {{ tor_hashed_password.stdout }}
+      {% endif %}
+
+      # Logging
+      Log notice syslog
+    mode: "0640"
+    owner: debian-tor
+    group: debian-tor
+  notify: restart tor
+  when: tor_key_stat.stat.exists
+
+- name: Enable and start Tor service
+  ansible.builtin.systemd:
+    name: tor
+    enabled: true
+    state: started
+    daemon_reload: true
+  when: tor_key_stat.stat.exists
