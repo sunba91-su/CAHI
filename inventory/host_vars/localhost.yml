@@ -1,0 +1,17 @@
+---
+# ────────────────────────────────────────────────────────────────────
+# Localhost variables for single-node deployments
+# ────────────────────────────────────────────────────────────────────
+
+# For single-node deployments, all components run on localhost
+# These variables override any host-specific settings
+
+# Database connection
+db_host: localhost
+
+# Network interface for guest VMs
+network_iface: virbr1
+iface_ip: 192.168.1.1
+
+# Deployment mode
+deployment_mode: single
