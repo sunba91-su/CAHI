@@ -5,7 +5,7 @@ Documentation=https://github.com/kevoreilly/CAPEv2
 [Service]
 Environment=LD_PRELOAD=libjemalloc.so
 WorkingDirectory={{ cape_main_dir }}/CAPEv2/
-ExecStart=/usr/bin/python3 cuckoo.py
+ExecStart={{ cape_main_dir }}/CAPEv2/.venv/bin/python3 cuckoo.py
 User={{ cape_user }}
 Group={{ cape_group }}
 Restart=always

@@ -5,8 +5,8 @@ Wants=cape.service
 After=cape-rooter.service
 
 [Service]
-WorkingDirectory={{ cape_main_dir }}/CAPEv2//utils/
-ExecStart=/usr/bin/python3 process.py -p7 auto -pt 900
+WorkingDirectory={{ cape_main_dir }}/CAPEv2/utils/
+ExecStart={{ cape_main_dir }}/CAPEv2/.venv/bin/python3 process.py -p7 auto -pt 900
 User={{ cape_user }}
 Group={{ cape_group }}
 Restart=always
