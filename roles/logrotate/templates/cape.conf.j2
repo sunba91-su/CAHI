@@ -1,0 +1,11 @@
+/opt/CAPEv2/log/*.log {
+    daily
+    rotate 14
+    compress
+    delaycompress
+    missingok
+    notifempty
+    copytruncate
+    maxsize 100M
+    create 0640 cape cape
+}

@@ -41,6 +41,18 @@
     group: root
     mode: 0644
 
+# ────────────────────────────────────────────────────────────────────
+# CAPE logrotate configuration from CAPEv2/ansible
+# ────────────────────────────────────────────────────────────────────
+
+- name: Template CAPE logrotate configuration file
+  template:
+    src: cape.conf.j2
+    dest: /etc/logrotate.d/cape.conf
+    owner: root
+    group: root
+    mode: 0644
+
 # CIS - 4.4 Ensure logrotate assigns appropriate permissions (Automated)
 - name: Update logrotate configuration with apporpriate permissions
   lineinfile:
