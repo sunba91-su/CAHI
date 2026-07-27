@@ -1,0 +1,22 @@
+---
+# ────────────────────────────────────────────────────────────────────
+# Vault-encrypted secrets
+# ────────────────────────────────────────────────────────────────────
+# Encrypt this file with: ansible-vault encrypt inventory/group_vars/all/vault.yml
+#
+# Required secrets:
+#   vault_db_password: PostgreSQL password for CAPE user
+#   vault_mongo_pass: MongoDB password
+#   vault_librenms_db_pass: LibreNMS database password
+#   vault_librenms_admin_pass: LibreNMS admin password
+#   vault_tor_password: Tor control password
+#   vault_crowdsec_capi_key: CrowdSec CAPI enrollment key
+#   vault_crowdsec_capi_email: CrowdSec CAPI enrollment email
+
+vault_db_password: CHANGEME
+vault_mongo_pass: CHANGEME
+vault_librenms_db_pass: CHANGEME
+vault_librenms_admin_pass: CHANGEME
+vault_tor_password: ""
+vault_crowdsec_capi_key: ""
+vault_crowdsec_capi_email: ""
