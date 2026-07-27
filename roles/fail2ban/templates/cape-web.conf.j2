@@ -1,0 +1,9 @@
+# CAPEv2 Fail2ban filter
+# Detects brute-force attacks against CAPE web interface
+
+[Definition]
+failregex = ^<HOST> .* "(GET|POST|HEAD) /apiv2/.*" (401|403) .*$
+            ^<HOST> .* "(GET|POST|HEAD) /api/.*" (401|403) .*$
+            ^<HOST> .* "(GET|POST|HEAD) /login.*" (401|403) .*$
+
+ignoreregex =
