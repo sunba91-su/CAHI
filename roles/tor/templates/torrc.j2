@@ -1,0 +1,16 @@
+## CAPEv2 Tor configuration
+
+# Transparent proxy port
+VirtualAddrNetworkIPv4 10.192.0.0/10
+AutomapHostsOnResolve 1
+TransPort {{ tor_trans_port }}  # Transparent proxy
+DNSPort {{ tor_dns_port }}      # DNS proxy
+ControlPort {{ tor_control_port }}
+
+# Hashed control password
+{% if tor_password | length > 0 %}
+HashedControlPassword {{ tor_hashed_password.stdout }}
+{% endif %}
+
+# Logging
+Log notice syslog
