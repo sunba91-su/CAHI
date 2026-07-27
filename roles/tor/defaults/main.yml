@@ -1,0 +1,6 @@
+---
+# Tor role defaults
+tor_trans_port: 9040
+tor_dns_port: 5353
+tor_control_port: 9051
+tor_password: ""
