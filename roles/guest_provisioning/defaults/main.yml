@@ -1,0 +1,34 @@
+---
+guest_scripts_dir: "{{ playbook_dir }}/generated_guest_scripts"
+resultserver_ip: "{{ iface_ip }}"
+resultserver_port: 8000
+agent_python_version: "3.11.4"
+agent_vc_redist_year: "2013"
+
+# Autounattend defaults (overridable in group_vars or host vars)
+windows_admin_password: "cape"
+windows_product_key: ""
+windows_auto_logon_count: 1
+windows_locale: en-US
+vm_wim_index: 6
+
+# CAPE agent download URL for postinstall.ps1
+# Override in local_vars.yml if your host IP differs:
+#   cape_agent_url: "http://YOUR_HOST_IP:8000/agent/agent.py"
+cape_agent_url: "http://192.168.1.1:8000/agent/agent.py"
+
+# ────────────────────────────────────────────────────────────────────
+# Sysmon deployment (WinRM-based, opt-in per guest)
+# ────────────────────────────────────────────────────────────────────
+# Set sysmon_install=true on each guest in [cape_guests_winrm] to deploy.
+# Requires pywinrm on the control node: pip install pywinrm
+sysmon_install: false
+# Empty = download latest release from GitHub. Set to e.g. "15.12" to pin.
+sysmon_version: ""
+# "template" uses the built-in CAPEv2 config; "file" uses sysmon_config_file
+sysmon_config_source: template
+sysmon_config_file: ""
+# Override the full download URL (empty = auto-detect from GitHub API)
+sysmon_download_url: ""
+sysmon_install_dir: "C:\\Sysmon"
+sysmon_service_name: "Sysmon"
