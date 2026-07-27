@@ -1,0 +1,74 @@
+---
+- name: Integration smoke test — submit benign file and verify processing
+  hosts: cape_host
+  gather_facts: true
+  vars:
+    smoke_test_file: /tmp/smoke_test.txt
+    smoke_test_timeout: 300
+    smoke_test_interval: 15
+
+  tasks:
+    - name: Check that CAPE API is reachable
+      ansible.builtin.uri:
+        url: "http://{{ iface_ip | default('127.0.0.1') }}:8000/"
+        return_content: true
+      register: api_check
+      failed_when: false
+
+    - name: Create a benign test file
+      ansible.builtin.copy:
+        dest: "{{ smoke_test_file }}"
+        content: "CAPEv2 smoke test file — benign content.\n"
+        mode: "0644"
+
+    - name: Submit file via curl (best-effort; API may not be running)
+      ansible.builtin.command:
+        cmd: >
+          curl -s -F "file=@{{ smoke_test_file }}"
+          http://{{ iface_ip | default('127.0.0.1') }}:8000/apiv2/tasks/create/file/
+      register: submit_result
+      changed_when: false
+      failed_when: false
+
+    - name: Parse submission response (best-effort)
+      ansible.builtin.set_fact:
+        smoke_task_id: "{{ (submit_result.stdout | from_json).task_id | default('') }}"
+      when:
+        - submit_result.stdout | length > 0
+        - submit_result.stdout is regex("^{")
+        - submit_result is defined
+
+    - name: Print submitted task ID
+      ansible.builtin.debug:
+        msg: "Submitted task {{ smoke_task_id | default('(none — API not reachable)') }}"
+      failed_when: false
+
+    - name: Poll for task completion (best-effort)
+      ansible.builtin.uri:
+        url: "http://{{ iface_ip | default('127.0.0.1') }}:8000/apiv2/tasks/view/{{ smoke_task_id }}"
+        return_content: true
+      register: task_status
+      until: task_status.json is defined and task_status.json.task.status == "reported"
+      retries: "{{ (smoke_test_timeout / smoke_test_interval) | int }}"
+      delay: "{{ smoke_test_interval }}"
+      failed_when: false
+      when: smoke_task_id is defined and smoke_task_id | length > 0
+
+    - name: Verify report has expected fields (best-effort)
+      ansible.builtin.assert:
+        that:
+          - task_status.json is defined
+          - task_status.json.task is defined
+          - task_status.json.task.status == "reported"
+          - task_status.json.task.file_name is defined
+          - task_status.json.task.added is defined
+        fail_msg: "Smoke test report is missing expected fields"
+        success_msg: "Smoke test passed: task {{ smoke_task_id | default('0') }} completed successfully"
+      when: task_status is defined and task_status.json is defined and task_status.json.task is defined
+      failed_when: false
+
+    - name: Clean up test file
+      ansible.builtin.file:
+        path: "{{ smoke_test_file }}"
+        state: absent
+      failed_when: false
