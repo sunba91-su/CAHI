@@ -22,21 +22,208 @@
     home: "/home/{{ cape_user | default('cape', true) }}"
     comment: "CAPE Sandbox User"
 
+# ────────────────────────────────────────────────────────────────────
+# 1. Clone repo
+# ────────────────────────────────────────────────────────────────────
+
+- name: Add CAPE root to git safe.directory list
+  git_config:
+    name: safe.directory
+    scope: global
+    value: "{{ cape_main_dir }}/CAPEv2"
+
 - name: Download CAPE sources
   git:
     repo: "{{ cape_repo_url }}"
     dest: "{{ cape_main_dir }}/CAPEv2"
     version: "{{ cape_repo_version }}"
+    depth: 1
     update: true
-    force: true
+    force: false
+
+- name: Ensure CAPE root ownership
+  file:
+    path: "{{ cape_main_dir }}/CAPEv2"
+    state: directory
+    owner: "{{ cape_user }}"
+    group: "{{ cape_group }}"
+    recurse: true
+
+# ────────────────────────────────────────────────────────────────────
+# 2. Create Python virtual environment
+# ────────────────────────────────────────────────────────────────────
+
+- name: Create Python virtual environment with uv
+  command:
+    cmd: /usr/local/bin/uv venv "{{ cape_main_dir }}/CAPEv2/.venv"
+    creates: "{{ cape_main_dir }}/CAPEv2/.venv/pyvenv.cfg"
+  become: true
+  become_user: "{{ cape_user }}"
+  when: use_uv | default(false)
+
+- name: Create Python virtual environment for CAPE
+  command:
+    cmd: /usr/bin/python3 -m venv "{{ cape_main_dir }}/CAPEv2/.venv"
+    creates: "{{ cape_main_dir }}/CAPEv2/.venv/pyvenv.cfg"
+  become: true
+  become_user: "{{ cape_user }}"
+  when: not (use_uv | default(false))
+
+- name: Install pip in venv via ensurepip
+  command:
+    cmd: "{{ cape_main_dir }}/CAPEv2/.venv/bin/python3 -m ensurepip --upgrade --default-pip"
+  become: true
+  become_user: "{{ cape_user }}"
+  changed_when: false
+  failed_when: false
+  when: not (use_uv | default(false))
+
+- name: Upgrade pip in venv
+  command:
+    cmd: "{{ cape_main_dir }}/CAPEv2/.venv/bin/pip install --upgrade pip setuptools wheel"
+  become: true
+  become_user: "{{ cape_user }}"
+  changed_when: false
+  failed_when: false
+  when: not (use_uv | default(false))
+
+# ────────────────────────────────────────────────────────────────────
+# 3. Install Python dependencies
+# ────────────────────────────────────────────────────────────────────
+
+- name: Sync dependencies with uv
+  command:
+    cmd: /usr/local/bin/uv sync --no-install-project
+    chdir: "{{ cape_main_dir }}/CAPEv2"
+  become: true
+  become_user: "{{ cape_user }}"
+  environment:
+    PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+    CRYPTOGRAPHY_DONT_BUILD_RUST: "1"
+  when: use_uv | default(false)
+
+- name: Install CAPE dependency build requirements
+  apt:
+    pkg:
+      - libpq-dev
+      - libxslt1-dev
+      - libre2-dev
+      - python3-greenlet
+      - python3-gevent
+      - python3-psycopg2
+    state: present
+
+- name: Sync dependencies with Poetry
+  command:
+    cmd: /etc/poetry/bin/poetry install
+    chdir: "{{ cape_main_dir }}/CAPEv2"
+  become: true
+  become_user: "{{ cape_user }}"
+  environment:
+    PYTHON_KEYRING_BACKEND: keyring.backends.null.Keyring
+    CRYPTOGRAPHY_DONT_BUILD_RUST: "1"
+  ignore_errors: true
+  when: not (use_uv | default(false))
+
+- name: Install libvirt Python bindings
+  apt:
+    pkg:
+      - python3-libvirt
+    state: present
+
+- name: Detect venv site-packages directory
+  command:
+    cmd: "{{ cape_main_dir }}/CAPEv2/.venv/bin/python3 -c 'import sysconfig; print(sysconfig.get_path(\"platlib\"))'"
+  register: _venv_platlib_dir
+  changed_when: false
+  when: not (use_uv | default(false))
+
+- name: Create .venv site-packages directory for libvirt .pth
+  file:
+    path: "{{ _venv_platlib_dir.stdout }}"
+    state: directory
+    mode: "0755"
+  when: not (use_uv | default(false))
+  failed_when: false
+
+- name: Make libvirt accessible from venv
+  copy:
+    dest: "{{ _venv_platlib_dir.stdout }}/libvirt.pth"
+    content: "/usr/lib/python3/dist-packages\n"
+    mode: "0644"
+  when: not (use_uv | default(false))
+  failed_when: false
+
+- name: Install yara-python system dependencies
+  apt:
+    pkg:
+      - libjansson-dev
+      - libmagic1
+      - libmagic-dev
+    state: present
+
+- name: Install yara-python with uv
+  command:
+    cmd: >
+      /usr/local/bin/uv pip install yara-python
+      --no-binary :all:
+    chdir: "{{ cape_main_dir }}/CAPEv2"
+  become: true
+  become_user: "{{ cape_user }}"
+  when: use_uv | default(false)
+
+- name: Install yara-python into venv
+  command:
+    cmd: >
+      "{{ cape_main_dir }}/CAPEv2/.venv/bin/pip" install yara-python
+      --no-binary :all:
+      --config-settings="--global-option=build"
+      --config-settings="--global-option=--enable-cuckoo"
+      --config-settings="--global-option=--enable-magic"
+      --config-settings="--global-option=--enable-profiling"
+    chdir: "{{ cape_main_dir }}/CAPEv2"
+  become: true
+  become_user: "{{ cape_user }}"
+  when: not (use_uv | default(false))
+
+- name: Install httpreplay with uv
+  command:
+    cmd: /usr/local/bin/uv pip install "git+https://github.com/CAPESandbox/httpreplay"
+  become: true
+  become_user: "{{ cape_user }}"
+  when: use_uv | default(false)
+
+- name: Install httpreplay with pip
+  command:
+    cmd: "{{ cape_main_dir }}/CAPEv2/.venv/bin/pip install git+https://github.com/CAPESandbox/httpreplay"
+  become: true
+  become_user: "{{ cape_user }}"
+  when: not (use_uv | default(false))
+
+# ────────────────────────────────────────────────────────────────────
+# 4. Configuration
+# ────────────────────────────────────────────────────────────────────
+
+- name: Copy .conf.default and .env files
+  shell:
+    cmd: >
+      for f in conf/default/*.conf.default conf/default/*.env; do
+        dest="conf/$(basename "${f%.default}")";
+        [ -f "${dest%.default}" ] || cp -v "./$f" "./${dest%.default}";
+      done
+    chdir: "{{ cape_main_dir }}/CAPEv2"
+  become: true
+  become_user: "{{ cape_user }}"
+  changed_when: false
 
 - name: Configure CAPE database connection
   ini_file:
     path: "{{ cape_main_dir }}/CAPEv2/conf/cuckoo.conf"
     section: database
     option: connection
-    value: "postgresql://{{ cape_user }}:{{ cape_pass }}@localhost:5432/{{ cape_user }}"
+    value: "postgresql://{{ db_user }}:{{ vault_db_password }}@{{ db_host }}:{{ db_port }}/{{ db_name }}"
     backup: true
+  no_log: true
 
 - name: Configure CAPE hypervisor backend
   ini_file:
@@ -46,17 +233,102 @@
     value: kvm
     backup: true
 
-- name: Perform CAPE web migration
-  command:
-    cmd: "/usr/bin/python3 manage.py migrate"
-    chdir: "{{ cape_main_dir }}/CAPEv2/web"
-  changed_when: false
-  ignore_errors: true
+- name: Set network interface in auxiliary.conf
+  lineinfile:
+    path: "{{ cape_main_dir }}/CAPEv2/conf/auxiliary.conf"
+    regexp: "^interface ="
+    line: "interface = {{ network_iface }}"
+    backrefs: true
 
-- name: Install CAPE community extensions
+- name: Enable machinelist API endpoint
+  ini_file:
+    path: "{{ cape_main_dir }}/CAPEv2/conf/api.conf"
+    section: machinelist
+    option: enabled
+    value: "yes"
+    state: present
+
+- name: Enable cuckoostatus API endpoint
+  ini_file:
+    path: "{{ cape_main_dir }}/CAPEv2/conf/api.conf"
+    section: cuckoostatus
+    option: enabled
+    value: "yes"
+    state: present
+
+- name: Enable or disable MongoDB in reporting.conf
+  ini_file:
+    path: "{{ cape_main_dir }}/CAPEv2/conf/reporting.conf"
+    section: mongodb
+    option: enabled
+    value: "{{ 'yes' if mongo_enable else 'no' }}"
+    state: present
+
+- name: Update kvm.conf interface to {{ network_iface }}
+  lineinfile:
+    path: "{{ cape_main_dir }}/CAPEv2/conf/kvm.conf"
+    regexp: "^interface ="
+    line: "interface = {{ network_iface }}"
+    backrefs: true
+
+# ────────────────────────────────────────────────────────────────────
+# 5. Sudoers
+# ────────────────────────────────────────────────────────────────────
+
+- name: Create /etc/sudoers.d/cape
+  copy:
+    dest: /etc/sudoers.d/cape
+    content: |
+      Cmnd_Alias CAPE_SERVICES = /usr/bin/systemctl restart cape-rooter, /usr/bin/systemctl restart cape-processor, /usr/bin/systemctl restart cape, /usr/bin/systemctl restart cape-web, /usr/bin/systemctl restart cape-dist, /usr/bin/systemctl restart cape-fstab, /usr/bin/systemctl restart suricata, /usr/bin/systemctl restart guac-web, /usr/bin/systemctl restart guacd
+      Cmnd_Alias UFW_STATUS = /usr/sbin/ufw status
+      {{ cape_user }} ALL=(ALL) NOPASSWD:CAPE_SERVICES, UFW_STATUS
+      {{ cape_user }} ALL=(ALL) NOPASSWD: /usr/bin/chmod o+x {{ cape_main_dir }}/CAPEv2
+      {{ cape_user }} ALL=(ALL) NOPASSWD: /usr/bin/chmod o+x {{ cape_main_dir }}/CAPEv2/web
+      {{ cape_user }} ALL=(ALL) NOPASSWD: /usr/bin/chmod -R o+rX {{ cape_main_dir }}/CAPEv2/web/static_collected/
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Create /etc/sudoers.d/ip_netns
+  copy:
+    dest: /etc/sudoers.d/ip_netns
+    content: |
+      {{ cape_user }} ALL=NOPASSWD: /usr/sbin/ip
+    mode: "0440"
+    validate: visudo -cf %s
+
+- name: Create /etc/sudoers.d/tcpdump
+  copy:
+    dest: /etc/sudoers.d/tcpdump
+    content: |
+      {{ cape_user }} ALL=NOPASSWD: {{ tcpdump_path }}
+    mode: "0440"
+    validate: visudo -cf %s
+
+# ────────────────────────────────────────────────────────────────────
+# 6. Install jemalloc
+# ────────────────────────────────────────────────────────────────────
+
+- name: Install jemalloc
+  apt:
+    pkg:
+      - libjemalloc-dev
+    state: present
+
+# ────────────────────────────────────────────────────────────────────
+# 7. Download community extensions
+# ────────────────────────────────────────────────────────────────────
+
+- name: Download community signatures
   command:
-    cmd: "/usr/bin/python3 community.py -waf -cr"
-    chdir: "{{ cape_main_dir }}/CAPEv2/utils"
+    cmd: "{{ cape_main_dir }}/CAPEv2/.venv/bin/python3 utils/community.py -waf -cr"
+    chdir: "{{ cape_main_dir }}/CAPEv2"
+  become: true
+  become_user: "{{ cape_user }}"
+  changed_when: false
+
+# ────────────────────────────────────────────────────────────────────
+# 8. Ensure final ownership
+# ────────────────────────────────────────────────────────────────────
 
 - name: Ensure CAPE permissions are set
   file:
@@ -65,6 +337,10 @@
     recurse: true
     owner: "{{ cape_user }}"
     group: "{{ cape_group }}"
+
+# ────────────────────────────────────────────────────────────────────
+# 9. Systemd services
+# ────────────────────────────────────────────────────────────────────
 
 - name: Configure CAPE processor service
   template:
