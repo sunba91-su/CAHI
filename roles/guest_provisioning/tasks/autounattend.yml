@@ -1,0 +1,56 @@
+---
+# ────────────────────────────────────────────────────────────────────
+# Generate answer ISO for unattended Windows installation
+#
+# Renders Autounattend.xml + postinstall.ps1, then packs them into
+# a CD-ROM ISO image with the $OEM$ folder structure so that
+# postinstall.ps1 is automatically copied to
+# C:\Windows\Setup\Scripts\postinstall.ps1 on the guest.
+#
+# Variables expected:
+#   ansible_host       — CAPE host IP (for VirtIO drivers download)
+#   windows_iso_path   — path to Windows ISO on the host
+#   windows_admin_password, windows_product_key, windows_locale
+#   vm_wim_index       — WIM index for the desired Windows edition
+# ────────────────────────────────────────────────────────────────────
+
+- name: Create answer file staging directory
+  ansible.builtin.tempfile:
+    state: directory
+    suffix: autounattend
+  register: autounattend_tmp_dir
+
+- name: Render Autounattend.xml from template
+  ansible.builtin.template:
+    src: Autounattend.xml.j2
+    dest: "{{ autounattend_tmp_dir.path }}/Autounattend.xml"
+    mode: "0644"
+
+- name: Render postinstall.ps1 from template
+  ansible.builtin.template:
+    src: postinstall.ps1.j2
+    dest: "{{ autounattend_tmp_dir.path }}/postinstall.ps1"
+    mode: "0644"
+
+- name: Create $OEM$ folder structure for script auto-copy
+  ansible.builtin.file:
+    path: "{{ autounattend_tmp_dir.path }}/$OEM$/$$/Setup/Scripts"
+    state: directory
+    mode: "0755"
+
+- name: Copy postinstall.ps1 into $OEM$ structure
+  ansible.builtin.copy:
+    src: "{{ autounattend_tmp_dir.path }}/postinstall.ps1"
+    dest: "{{ autounattend_tmp_dir.path }}/$OEM$/$$/Setup/Scripts/postinstall.ps1"
+    remote_src: true
+    mode: "0644"
+
+- name: Create answer ISO image
+  ansible.builtin.shell:
+    cmd: >
+      genisoimage -J -R
+      -o "{{ autounattend_tmp_dir.path }}/autounattend.iso"
+      "{{ autounattend_tmp_dir.path }}"
+    executable: /bin/bash
+  args:
+    creates: "{{ autounattend_tmp_dir.path }}/autounattend.iso"
