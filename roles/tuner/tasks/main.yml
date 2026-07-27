@@ -131,3 +131,83 @@
     owner: root
     group: root
     mode: 0644
+
+# ────────────────────────────────────────────────────────────────────
+# CAPEv2 sysctl additions from CAPEv2/ansible
+# ────────────────────────────────────────────────────────────────────
+
+- name: Load tcp_bbr module
+  command:
+    cmd: modprobe tcp_bbr
+  changed_when: false
+  failed_when: false
+  register: bbr_module
+
+- name: Enable BBR congestion control
+  sysctl:
+    name: net.ipv4.tcp_congestion_control
+    value: bbr
+    state: present
+    reload: true
+  when: bbr_module.rc == 0
+
+- name: Disable bridge-nf-call for arptables
+  sysctl:
+    name: net.bridge.bridge-nf-call-arptables
+    value: "0"
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: Disable bridge-nf-call for ip6tables
+  sysctl:
+    name: net.bridge.bridge-nf-call-ip6tables
+    value: "0"
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: Disable bridge-nf-call for iptables
+  sysctl:
+    name: net.bridge.bridge-nf-call-iptables
+    value: "0"
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: Disable IPv6 on all interfaces
+  sysctl:
+    name: net.ipv6.conf.all.disable_ipv6
+    value: "1"
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: Disable IPv6 on default interfaces
+  sysctl:
+    name: net.ipv6.conf.default.disable_ipv6
+    value: "1"
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: Keep IPv6 on loopback
+  sysctl:
+    name: net.ipv6.conf.lo.disable_ipv6
+    value: "0"
+    state: present
+    reload: true
+    sysctl_set: true
+
+- name: Load br_netfilter module
+  copy:
+    dest: /etc/modules-load.d/cape.conf
+    content: |
+      br_netfilter
+    mode: "0644"
+
+- name: Ensure br_netfilter is loaded now
+  command:
+    cmd: modprobe br_netfilter
+  changed_when: false
+  failed_when: false
