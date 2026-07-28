@@ -22,7 +22,52 @@ The project tracks security and hardening configurations that are automated, whi
 
 # Deployment for Production
 
-Coming soon.
+The Ansible playbook deployment supports both single-node and multi-node topologies. See [Deployment](docs/Deployment.md) for full instructions.
+
+### Quick Start (Single Node)
+
+```bash
+# 1. Clone and configure
+git clone https://github.com/CAPESandbox/CAHI.git
+cd CAHI
+cp inventory/group_vars/all/vault.yml.example inventory/group_vars/all/vault.yml
+
+# 2. Edit inventory
+vim inventory/hosts.ini
+
+# 3. Deploy
+./deploy.sh
+```
+
+### Multi-Node Deployment
+
+```bash
+# Deploy control node
+ansible-playbook playbooks/multi-node-control.yml -i inventory/hosts.ini --ask-vault-pass
+
+# Deploy web node
+ansible-playbook playbooks/multi-node-web.yml -i inventory/hosts.ini --limit web -K
+
+# Deploy worker node(s)
+ansible-playbook playbooks/multi-node-worker.yml -i inventory/hosts.ini --limit worker -K
+
+# Register worker with control plane
+ansible-playbook playbooks/register-worker.yml -i inventory/hosts.ini --ask-vault-pass
+```
+
+### Available Playbooks
+
+| Playbook | Description |
+|----------|-------------|
+| `single-node.yml` | Full CAPE deployment on a single host |
+| `multi-node-control.yml` | Control plane only (PostgreSQL, Redis, nginx) |
+| `multi-node-web.yml` | Web interface (nginx, CAPE web, gunicorn) |
+| `multi-node-worker.yml` | Analysis worker (KVM, CAPE, suricata) |
+| `register-worker.yml` | Register worker with control plane |
+| `verify.yml` | Verify deployment health |
+| `smoke-test.yml` | Run smoke tests |
+| `deploy-sysmon.yml` | Deploy Sysmon to Windows guests |
+| `rollback.yml` | Rollback to previous version |
 
 # Development and Testing Scenarios
 
